@@ -1,0 +1,639 @@
+---
+title: "Noise handling for genetic circuit characterisation"
+author: "Qian Li"
+format: 
+   revealjs
+editor: visual
+---
+
+## Contents
+
+-   Catch-up on the background
+
+-   Genetic gate characterization with ShinyFlour with real-world flourescent data
+
+-   Noise reduction with Bayesian Markov Chain Monte Carlo (BayesianMCMC)
+
+-   Updates on Bayesian ShinyFlour
+
+## Background
+
+```{r chart3, fig.pos="H", echo=FALSE}
+d <- DiagrammeR::grViz("
+digraph {
+  graph [rankdir = LR]
+
+  subgraph cluster_0 {
+    node [shape=box]
+    'NGS sequencing'
+    'Fluorescent analyses'
+    label='Experiment Interface'
+    color=gold
+  }
+
+  subgraph cluster_1 {
+    node [shape=box]
+    'Genetic gate parameters'
+    'Circuit performance'
+    label = 'Database'
+    color=royalBlue
+  }
+  
+  subgraph cluster_2 {
+    node [shape=box]
+    'ODE modeling'
+    'Gate selection'
+    label = 'Design'
+    color=Blue
+  }
+  
+  subgraph cluster_3 {
+    node [shape=box]
+    'ShinyFluor'
+    'Genetic Circuit Navigator'
+    label = 'Characterisation'
+    color=red
+  }
+
+  'NGS sequencing' -> 'Genetic Circuit Navigator' 
+  'Fluorescent analyses' ->  'ShinyFluor'
+  'Genetic gate parameters' -> 'Gate selection' [label='curation']
+  'Genetic gate parameters' -> 'ODE modeling'
+  'ShinyFluor' -> 'Genetic gate parameters' [label='model fitting']
+  'Genetic Circuit Navigator' -> 'Circuit performance' [label='debugging']
+  'Circuit performance' -> 'Gate selection' 
+  'Gate selection' -> 'Genetic Circuits'
+  'Genetic Circuits' -> 'NGS sequencing'
+  'Genetic Circuits' -> 'Fluorescent analyses'
+}
+", width="100%", height=250)
+
+d
+```
+
+## Variation of real-world flourescent data {.smaller}
+
+::: panel-tabset
+### Input-Output relation
+
+```{r}
+
+library(plotly)
+library(MASS)
+tab <- read.table("/Users/qianli/Desktop/workfiles/nc2011_raw/plux30.txt")
+
+realtab <- t(tab[c(1,7:18),])
+
+colnames(realtab) <- c("I",paste0("Set",2:length(colnames(realtab))))
+
+rownames(realtab) <- 1:length(rownames(realtab))
+
+write.table(realtab,"/Users/qianli/Desktop/workfiles/shinyflour_new/realworlddata/plux30.1.csv",sep=",",quote = F)
+realtab <- as.data.frame(realtab)
+fig <- plot_ly(x = ~x) 
+
+for(i in 2:length(colnames(realtab))) {
+  x=realtab$I
+  y=realtab[,i]
+  fig <- fig %>% 
+  add_lines(y = y, 
+            name = paste0("Set",i,"_line")) %>%
+  layout(xaxis = list(range = c(log10(min(x)), log10(max(x))),
+                      type = 'log',
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff',
+                      title = 'x')) 
+fig <- fig %>% 
+  add_trace( x = x, y = y,  type = 'scatter', name = paste0("Set",i,"_dot"))
+}
+
+reshape.func <- function(df, vec) {
+  df1 <- as.data.frame(df)
+  df1$index <- rownames(df)
+  tmpl <- df1[,-match(vec,colnames(df1))]
+  finaldf <- data.frame()
+  for(i in 1:length(vec)) {
+    tmpd1 <-  df1[,match(vec[i],colnames(df1))]
+    tmpd <- cbind(tmpl, tmpd1)
+    tmpd$element <- vec[i]
+    colnames(tmpd) <- c(colnames(tmpl), "value", "element")
+    finaldf <- rbind(finaldf, tmpd)
+  }
+  
+  return(finaldf)
+}
+
+fig
+```
+
+### Variation within sampling points
+
+```{r}
+
+modeldat <- reshape.func(realtab, colnames(realtab)[2:length(colnames(realtab))])
+
+fig2 <- plot_ly( type = "violin")
+for(i in 1:length(unique(modeldat$I))){
+  fitsigma <- fitdistr(modeldat$value[modeldat$I==unique(modeldat$I)[i]], "normal")
+  fig2 <- fig2 %>%
+    add_trace(y = modeldat$value[modeldat$I==unique(modeldat$I)[i]], name = paste0("I=",unique(modeldat$I)[i]))
+  
+ # print(fitsigma$estimate)
+}
+
+
+fig2
+
+
+```
+
+### Summary of NLS model fitting
+
+```{r}
+library(minpack.lm)
+formula.activ.model <- function(k,alpha,n1,K1,I) k*(alpha+(I^n1)/(K1^n1+I^n1))
+nlsmod.1 <- nlsLM(value ~ formula.activ.model(k,alpha,n1,K1,I), 
+    data = modeldat, 
+    algorithm = "port",
+    start=list(k=max(modeldat$value),
+               alpha=0,
+               n1=log10(max(modeldat$value)- min(modeldat$value)),
+               K1=modeldat$I[abs(modeldat$value - (max(modeldat$value)+ min(modeldat$value))/2) == min(abs(modeldat$value - (max(modeldat$value)+ min(modeldat$value))/2))]
+               )
+   # trace=T
+    )
+print(summary(nlsmod.1))
+
+```
+:::
+
+## Bayesian Inference
+
+![](www/bayesianequation.png)
+
+## Markov Chain Monte Carlo {.smaller}
+
+::: columns
+::: {.column width="50%"}
+-   Markov Chain: to characterize non-IID (not independent and identically distributed) random processes.[^1]
+-   Markov Chain Monte Carlo (MCMC) algorithms are a class of techniques that use Markov chains to sample from a target probability distribution ("Monte Carlo"). [^2]
+:::
+
+::: {.column width="50%"}
+![](www/weather_markov_chain.png) ![](www/mcmc.png)
+:::
+:::
+
+[^1]: https://mc-stan.org/rstan
+
+[^2]: https://pystan.readthedocs.org/en/latest/
+
+::: aside
+:::
+
+## Markov Chain Monte Carlo \[2\] {.smaller}
+
+```{r}
+d <- DiagrammeR::grViz("
+digraph {
+  graph [rankdir = LR,fontsize = 18]
+  
+  subgraph cluster_0 {
+    node [shape=box,fontsize = 18]
+    'Markov Chain'
+    label='Random process'
+    color=royalBlue
+  }
+   
+   subgraph cluster_1 {
+    node [shape=box,fontsize = 18]
+    'Monte Carlo Methods'
+    label='A set of algorithms'
+    color=royalBlue
+   }
+  
+  'Monte Carlo Methods' -> 'Samples of probability distribution'
+  'Markov Chain' -> 'Random sampling'
+  'Probability distribution' -> 'Markov Chain'
+  'Random sampling' -> 'Monte Carlo Methods'
+}
+")
+
+d
+```
+
+## Compare Bayesian MCMC and NLS {.smaller}
+
++--------------+----------------+------------------------------+-------------------------------------+
+| Method       | Packages       | Advantages                   | Disadvantages                       |
++==============+================+==============================+=====================================+
+| NLS          | -   stats      | -   large initial range      | -   Fixed model                     |
+|              | -   minpack.lm | -   saves computation        | -   trapped in local optimum        |
+|              | -   nlme       | -   interpretability         | -   hypothesize normal distribution |
++--------------+----------------+------------------------------+-------------------------------------+
+| BayesianMCMC | -   rstan      | -   flexibility              | -   computation consuming           |
+|              | -   rstanarm   | -   overcomes local optimums | -   sensitive to priors             |
+|              |                | -   estimates variations     | -   different coding language       |
+|              |                | -   no normal hypothesis     |                                     |
++--------------+----------------+------------------------------+-------------------------------------+
+
+## Stan Intergrations
+
+::: columns
+::: {.column width="50%"}
+-   Rstan: Stan with R coding [^3]
+-   Pystan: Stan with Python coding [^4]
+-   CmdStan: Stan with command lines [^5]
+:::
+
+::: {.column width="50%"}
+![](www/stanlogo.jpeg)
+:::
+:::
+
+[^3]: https://mc-stan.org/rstan
+
+[^4]: https://pystan.readthedocs.org/en/latest/
+
+[^5]: https://mc-stan.org/docs/cmdstan-guide/index.html
+
+::: aside
+Links to resources
+:::
+
+## Gate characterization with Stan {.smaller}
+
+::: columns
+::: {.column width="50%"}
+-   Gate model $$\mu_i = k*(\alpha + \frac{{I}^{n_\text{1}}}{{K}^{n_\text{1}} + {I_i}^{n_1}})$$
+-   Model output variation $$Y_i \sim N(\mu_i,\sigma) , \sigma = \frac{1}{\sqrt \tau} $$
+-   Parameter priors $$\begin{cases}
+    k \sim \mathit{N(k_{exp}, k_{sd})} \\
+    \alpha \sim \mathit{N(\alpha_{exp}, \alpha_{sd})} \\
+    n1 \sim \mathit{N(n1_{exp}, n1_{sd})} \\
+    K1 \sim \mathit{N(\alpha_{exp}, K1_{sd})} \\
+    \tau \sim \mathit{\Gamma (0.1,0.1)}
+    \end{cases}
+    $$
+:::
+
+::: {.column width="50%"}
+```{r, eval=FALSE}
+#| echo: true
+#| code-line-numbers: "6|7,17|11-15"
+'
+  transformed parameters {
+  real sigma; 
+  real m[N];
+  for (i in 1:N) 
+    m[i] = k * (alpha + 1/(1 + pow(K1/x[i], n1)));
+  sigma = 1 / sqrt(tau); 
+} 
+model {
+  // priors
+  k ~ normal(8.125066e+04, 1.024814e+043); 
+  alpha ~ normal(4.594767e-03, 5.114812e-02); 
+  n1 ~ normal(1.292225e+00, 5.634283e-01); 
+  K1 ~ normal(4.560650e-04, 1.734237e-04); 
+  tau ~ gamma(.1, .1); 
+  // likelihood
+  Y ~ normal(m, sigma);   
+}
+'
+
+```
+:::
+:::
+
+## Fit example dataset with BayesianMCMC
+
+```{r, echo=F,eval = FALSE,include=FALSE}
+
+testdat <- list(N=length(modeldat$I),
+                x=modeldat$I,
+                Y=modeldat$value)
+
+stanmodel <- "
+data {
+  int<lower=0> N; 
+  real x[N]; 
+  real Y[N]; 
+} 
+parameters {
+  real alpha;
+  real<lower=0> k;
+  real<lower=0> K1;
+  real<lower=0> n1;
+  real<lower=0> tau; 
+} 
+transformed parameters {
+  real sigma; 
+  real m[N];
+  for (i in 1:N) 
+    m[i] = k * (alpha + 1/(1 + pow(K1/x[i], n1)));
+  sigma = 1 / sqrt(tau); 
+} 
+model {
+  // priors
+  k ~ normal(8.125066e+04, 1.024814e+043); 
+  alpha ~ normal(4.594767e-03, 5.114812e-02); 
+  n1 ~ normal(1.292225e+00, 5.634283e-01); 
+  K1 ~ normal(4.560650e-04, 1.734237e-04); 
+  //tau ~ gamma(.1, .1); 
+  // likelihood
+  Y ~ normal(m, sigma);   
+}
+generated quantities{
+  real Y_mean[N]; 
+  real Y_pred[N]; 
+  for(i in 1:N){
+    // Posterior parameter distribution of the mean
+    Y_mean[i] = k * (alpha + 1/(1 + pow(K1/x[i], n1)));
+    // Posterior predictive distribution
+    Y_pred[i] = normal_rng(Y_mean[i], sigma);   
+}
+}
+"
+library(rstan)
+fit2 <- stan(model_code = stanmodel, 
+            model_name = "GrowthCurve", 
+            data = testdat)
+```
+
+```{r}
+print(fit2,c("k","alpha","K1","n1"),digits_summary = 8)
+```
+
+## Stanmodels: working with ShinyFlour {.smaller}
+
+```{r chart1, echo=FALSE}
+#| layout-ncol: 2
+#| fig-format: svg
+#| label: fig-charts
+#| fig-cap: "Gate characterization workflow"
+#| fig-subcap: 
+#|   - "Single-input"
+#|   - "Multiple-input"
+
+
+
+d <- DiagrammeR::grViz("
+digraph {
+  graph [rankdir = TB,fontsize = 18]
+
+  subgraph cluster_0 {
+    node [shape=box,fontsize = 18]
+    'Select Gate Model'
+    'Upload a fluorescent file'
+    'Inspect distribution'
+    label='Load datasets'
+    color=gold
+  }
+  
+  subgraph cluster_2 {
+    node [shape=box,fontsize = 18]
+    'Setting initials'
+    'NLS Model'
+    'Inspect prediction curves'
+    label = 'NLS model fitting'
+    color=royalBlue
+  }
+  
+  subgraph cluster_3 {
+    node [shape=box,fontsize = 18]
+    'NLS parameters'
+    'Bayesian MCMC parameters'
+    label = 'Record Panel'
+    color=red
+  }
+  
+  subgraph cluster_4 {
+    node [shape=box,fontsize = 18]
+    'Load priors'
+    'Stan scripting'
+    'MCMC sampling'
+    'Posterior distribution'
+    label = 'Bayesian MCMC'
+    color=royalBlue
+  }
+
+  'Upload a fluorescent file' -> 'Setting initials' 
+  'Upload a fluorescent file' ->  'Inspect distribution'
+  'Inspect distribution' -> 'Select Gate Model' [label='check', style ='dashed']
+  'Select Gate Model' -> 'NLS Model'
+  'Setting initials' -> 'NLS Model'
+  'NLS Model' -> 'Load priors' [label='Enhance significance']
+  'Load priors' -> 'Stan scripting' 
+  'Stan scripting' -> 'MCMC sampling'[label='Rcpp compilation']
+  'MCMC sampling' -> 'Posterior distribution' 
+  'Posterior distribution' -> 'Bayesian MCMC parameters' [label='Success']
+  'Inspect prediction curves' -> 'Setting initials' [label='failure',style ='dashed']
+  'Posterior distribution' -> 'MCMC sampling' [label='failure',style ='dashed']
+  'NLS Model' -> 'Inspect prediction curves'[label='Check Relation',style ='dashed']
+  'Inspect prediction curves' -> 'NLS parameters' [label='Success']
+  
+}
+", width="120%", height=500)
+
+d2 <- DiagrammeR::grViz("
+digraph {
+  graph [rankdir = TB,fontsize = 18]
+
+  subgraph cluster_0 {
+    node [shape=box,fontsize = 18]
+    'Select Gate Model'
+    'Upload a fluorescent file'
+    'Inspect distribution'
+    label='Load datasets'
+    color=gold
+  }
+  
+  subgraph cluster_1 {
+    node [shape=box]
+    'simulate with sensor models'
+    'Inspect sensor prediction'
+    label = 'Load sensor charateristics'
+    color=gold
+  }
+  
+  subgraph cluster_2 {
+    node [shape=box,fontsize = 18]
+    'Setting initials'
+    'NLS Model'
+    'Inspect prediction curves'
+    label = 'NLS model fitting'
+    color=royalBlue
+  }
+  
+  subgraph cluster_3 {
+    node [shape=box,fontsize = 18]
+    'NLS parameters'
+    'Bayesian MCMC parameters'
+    label = 'Record Panel'
+    color=red
+  }
+  
+  subgraph cluster_4 {
+    node [shape=box,fontsize = 18]
+    'Load priors'
+    'Stan scripting'
+    'MCMC sampling'
+    'Posterior distribution'
+    label = 'Bayesian MCMC'
+    color=royalBlue
+  }
+  
+   subgraph cluster_5 {
+    node [shape=box]
+    'Sensor parameters'
+    label = 'Gate resources'
+    color=red
+  }
+
+  'Upload a fluorescent file' -> 'Setting initials' 
+  'Upload a fluorescent file' ->  'Inspect distribution'
+  'Sensor parameters' -> 'simulate with sensor models'
+  'Upload a fluorescent file' -> 'simulate with sensor models'
+  'simulate with sensor models' -> 'Inspect prediction curves'
+  'Inspect prediction curves' -> 'Inspect distribution'
+  'Inspect distribution' -> 'Select Gate Model' [label='check', style ='dashed']
+  'Select Gate Model' -> 'NLS Model'
+  'Setting initials' -> 'NLS Model'
+  'NLS Model' -> 'Load priors' [label='Enhance significance']
+  'Load priors' -> 'Stan scripting' 
+  'Stan scripting' -> 'MCMC sampling'[label='Rcpp compilation']
+  'MCMC sampling' -> 'Posterior distribution' 
+  'Posterior distribution' -> 'Bayesian MCMC parameters' [label='Success']
+  'Inspect prediction curves' -> 'Setting initials' [label='failure',style ='dashed']
+  'Posterior distribution' -> 'MCMC sampling' [label='failure',style ='dashed']
+  'NLS Model' -> 'Inspect prediction curves'[label='Check Relation', style ='dashed']
+  'Inspect prediction curves' -> 'NLS parameters' [label='Success']
+  
+}
+", width="110%", height=500)
+  
+d
+d2
+```
+
+## Excel at ShinyFlour
+
+##### Spreadsheet in, Spreadsheet out:
+
+```{r}
+DiagrammeR::mermaid("
+graph LR
+  A[file]-->B{Detect Extension}
+  
+  B-->C(.csv)
+  C(.csv)-->D[CSV loader]
+  B-->E(.xls or .xlsx)
+  E(.xls or .xlsx)-->F[Excel loader]
+  D-->G[Processor]
+  F-->G
+  G-->H{Outputs}
+  H-->J[Spreadsheet 1]
+  H-->K[Spreadsheet 2]
+  H-->P[Spreadsheet ...]
+  style A fill:#ededed
+  style J fill:#ededed
+  style K fill:#ededed
+  style P fill:#ededed
+")
+
+```
+
+```{r}
+DiagrammeR::mermaid("
+graph LR
+  A[Genetic Circuit Features]-->B(Transcripts)
+  L[Sequences] --> B
+  
+  M[Splicing Efficiency] --> N(Fold Change Matrix)
+  N --> C{Simulation: polyester}
+  B-->C
+  
+  P[Replicates] --> C
+  
+  C --> D(Reads Sets)
+  C --> E(Read Info)
+  
+  D --> G{Generate Alignments}
+  G --> H[Splicing Site Coverage]
+  
+  style A fill:#ededed
+  style L fill:#ededed
+  style M fill:#ededed
+style P fill:#ededed
+")
+
+```
+
+## Standarised Synopsis for Synthetic Bio-models ( $S^3B$ )
+
+```{r}
+DiagrammeR::mermaid("
+graph LR
+  A{Object}-->U[Accession]
+  A-->C[Construct]
+  C-->F(GenomicFeatureTable)
+  C-->G(Sequences)
+  C-->H(OtherConstructInfo)
+  
+  A-->B[OperationType]
+  
+  A-->D[ModelSynopsis]
+  D-->X(ModelSets)
+  
+  X-->Y[ParameterSet]
+  X-->I[ModelInfo]
+  
+  I-->L(EquationSuite)
+  I-->M(ModelFittingMethod)
+  I-->N(OtherModelInfo)
+  
+  Y-->P(ParameterNames)
+  Y-->Q(Estimation)
+  Y-->R(DerivedParameters)
+  
+  A-->E[RawData]
+  E-->S(DataSets)
+  S-.->N
+  
+  
+  style F fill:#ededed
+  style G fill:#ededed
+  style N fill:#ededed
+  style E fill:#ededed
+  style H fill:#ededed
+  style R fill:#ededed
+  style X fill:#cad6eb
+  style S fill:#cad6eb
+")
+```
+
+```{r}
+
+mygateobject <- list(Accession="pBAD_30",
+                     Construct=list(),
+                     OperationType="Sensor",
+                     ModelSynopsis=list(Model1=list(
+                       ParameterSet=list(
+                         ParameterNames=names(coef(nlsmod.1)),
+                         Estimation=as.data.frame(summary(nlsmod.1)$coefficient)
+                     ),
+                       ModelInfo=list(
+                         EquationSuite=deparse(formula.activ()),
+                         ModelFittingMethod="NLS",
+                         OtherInfo=list(ModelData="Dataset1")
+                       )
+                     )),
+                     RawData=list(Dataset1=modeldat)
+                     )
+
+#jsonify::pretty_json(mygateobject,by="row")
+ write(jsonify::pretty_json(mygateobject,by="row"),"jsonout/pBAD_30.json")
+```
+
+## Let's explore new ShinyFlour with examples of bayesianMCMC fitting

@@ -1,0 +1,14 @@
+name: shinyflour_new
+title: shinyflour_new
+username:
+account: lynceuslq
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9388679
+bundleId: 7405252
+url: https://lynceuslq.shinyapps.io/shinyflour_new/
+when: 1688114494.63135
+lastSyncTime: 1688114494.63136
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|BayesianShinyFlour.html|BayesianShinyFlour.qmd|shinyflor_pptslides.Rmd|shinyflor_slides.html|shinyflor_slides.Rmd|example_files|realworlddata

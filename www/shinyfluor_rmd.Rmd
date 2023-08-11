@@ -1,0 +1,207 @@
+---
+title: "ShinyFluor: Help page"
+author: "qian li"
+date: "2/23/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(DiagrammeR)
+library(htmlwidgets)
+
+```
+
+## 
+
+### 1. Introduction
+
+### 2. ShinyFluor genetic gate resources
+
+### 3. Workflow of gate characterization with ShinyFluor
+
+#### 3.1. Characterising single-input gates and sensors
+
+```{r chart1, echo=FALSE}
+d <- DiagrammeR::grViz("
+digraph {
+  graph [rankdir = LR]
+
+  subgraph cluster_0 {
+    node [shape=box]
+    'Select Gate Model'
+    'Upload a Fluor file'
+    label='Step 1'
+    color=gold
+  }
+
+  subgraph cluster_1 {
+    node [shape=box]
+    'Inspect data distr'
+    'Setting initials'
+    label = 'Step 2'
+    color=royalBlue
+  }
+  
+  subgraph cluster_2 {
+    node [shape=box]
+    'Model fitting'
+    'Inspect prediction curves'
+    label = 'Step 3'
+    color=royalBlue
+  }
+  
+  subgraph cluster_3 {
+    node [shape=box]
+    'Add to record'
+    'Add to database'
+    label = 'Step 4'
+    color=red
+  }
+
+  'Upload a Fluor file' -> 'Setting initials' 
+  'Upload a Fluor file' ->  'Inspect data distr'
+  'Setting initials' -> 'Model fitting'
+  'Inspect prediction curves' -> 'Setting initials' [label='failure']
+  'Model fitting' -> 'Add to record' [label='Success']
+  'Add to record' -> 'Add to database'
+}
+", width="100%", height=250)
+
+d
+
+```
+
+#### 3.2. Characterising 2-input gates
+
+```{r chart2, fig.pos="H", echo=FALSE}
+d <- DiagrammeR::grViz("
+digraph {
+ # graph [rankdir = LR]
+  graph [rankdir = LR,
+         compound = true,
+         layout = dot,
+         nodesep = .5, 
+         ranksep = .25,
+         color = crimson]
+
+  node [fontname = Helvetica,
+        fontcolor = darkslategray,
+        shape = rectangle,
+      #  fixedsize = true, 
+        width = 1,
+        color = darkslategray]
+
+ # edge [color = grey, arrowhead = none, arrowtail = none]
+
+
+  subgraph cluster_0 {
+    node [shape=box]
+    'Select Gate Model'
+    'Upload a Fluor file'
+    'Select sensor models'
+    label='Step 1'
+    color=gold
+  }
+  
+  subgraph cluster_1 {
+    node [shape=box]
+    'simulate with sensor models'
+    'Inspect sensor prediction'
+    label = 'Step 2'
+    color=royalBlue
+  }
+
+  subgraph cluster_2 {
+    node [shape=box]
+    'Inspect data distr'
+    'Setting initials'
+    label = 'Step 3'
+    color=royalBlue
+  }
+  
+  subgraph cluster_3 {
+    node [shape=box]
+    'Model fitting'
+    'Inspect prediction curves'
+    label = 'Step 4'
+    color=royalBlue
+  }
+  
+  subgraph cluster_4 {
+    node [shape=box]
+    'Add to record'
+    'Add to database'
+    label = 'Step 5'
+    color=red
+  }
+  
+  subgraph cluster_5 {
+    node [shape=box]
+    'Sensor parameters'
+    label = 'Gate resources'
+    color=red
+  }
+  
+  'Upload a Fluor file' ->  'simulate with sensor models'
+  'Select sensor models' -> 'simulate with sensor models'
+  'Inspect sensor prediction' -> 'Setting initials' 
+  'Setting initials' -> 'Model fitting'
+  'Inspect prediction curves' -> 'Setting initials' [label='failure']
+  'Model fitting' -> 'Add to record' [label='Success']
+  'Add to record' -> 'Add to database'
+  'Sensor parameters' -> 'Select sensor models'
+}
+", width="100%", height=300)
+
+d
+```
+
+### 4. Build-in gate characterization models
+
+-   Sensor: $$f(I)=k*(\alpha + \frac{{I}^{n_\text{1}}}{{K}^{n_\text{1}} + {I}^{n_\text{1}}})$$
+-   NOT Gate: $$f(R_\text{3}) = k_\text{3}*(\alpha_\text{3} + \frac{{K_\text{3}}^{n_\text{3}}}{{K_\text{3}}^{n_\text{3}} + {R_\text{3}}^{n_\text{3}}})$$
+-   AND Gate: $$f(R,S) = G_\text{max}*\frac{{R/{K_\text{r}}}^{n_\text{r}}}{1+{R/{K_\text{r}}}^{n_\text{r}}}*\frac{{S/{K_\text{s}}}^{n_\text{s}}}{1+{S/{K_\text{s}}}^{n_\text{s}}}$$
+
+### 5. File uploading notice
+
+First, ShinyFluor accept csv files (i.e. files with comma as separaters) **ONLY**. Csv files can be exported from many spread sheet software including Excel and Numbers, so please export your fluorescent tables to csv files before uploading them for analyses.
+
+Second, the content of your table should be numbers **ONLY**, yet, numbers with exponential formats such as **0.32e-2** and **4.6e3** are **acceptable**.
+
+#### 5.1 Fluorescent file input example (sensors)
+
+The format of input files for sensors should be comma separated with I as the column for inducer levels, while all other columns will be recognized as replicates of fluorescent examinations.
+
+|     | I     | set1    | set2    | set3   |
+|-----|-------|---------|---------|--------|
+| 1   | 0     | 0.003   | 0.0043  | 0.0063 |
+| 2   | 0.001 | 0.0054  | 0.0032  | 0.0032 |
+| 3   | 0.003 | 0.00643 | 0.00021 | 0.0043 |
+| ... | ...   | ...     | ...     | ...    |
+
+#### 5.2 Fluorescent file input example (NOT gates)
+
+The format of input files for NOT gates should be comma separated with R3 as the column for inducer levels, while all other columns will be recognized as replicates of fluorescent examinations.
+
+|     | R3     | set1  | set2  | set3  |
+|-----|--------|-------|-------|-------|
+| 1   | 0      | 53454 | 23432 | 43211 |
+| 2   | 0.0003 | 56544 | 35443 | 45433 |
+| 3   | 0.0063 | 47766 | 45356 | 47643 |
+| ... | ...    | ...   | ...   | ...   |
+
+#### 5.3 Fluorescent file input example (AND gates)
+
+The format of input files for AND gate is different from above, due to the dimensions of data information. the Fluorescent table for AND gates should be comma separated with R3 as the column for inducer levels, while all other columns will be recognized as replicates of fluorescent examinations.
+
+|     | Rep  | I1         | I2        | O         |
+|-----|------|------------|-----------|-----------|
+| 1   | set1 | 0          | 0         | 0.0000413 |
+| 2   | set2 | 0          | 0         | 0.0000252 |
+| 3   | set1 | 0.00016765 | 0.0000212 | 0.0000656 |
+| 4   | set2 | 0.00016765 | 0.0000212 | 0.0000874 |
+| ... | ...  | ...        | ...       | ...       |
+
+### 6. Communication with gate databases
+
+### 7. Get in touch
