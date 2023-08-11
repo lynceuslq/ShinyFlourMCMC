@@ -11,4 +11,10 @@ Bayesian Inference for genetic gate parameterisation (sensor example)
     $$\tau \sim \mathit{\Gamma (0.1,0.1)}$$
 
 ## Workflow
-![]
+![Workflow for sensor parameterisation](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/MCMC_workflow_single%20input.png)
+
+## Hints for flourescent file uploading
+![File input](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/fileinput.png)
+
+## Comparing metrics of genetic elements
+![Compare radar](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/radar_compare.png)
