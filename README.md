@@ -1,6 +1,9 @@
 # ShinyFlourMCMC
 
-Bayesian Inference for genetic gate parameterisation (sensor example)
+## Example Work page for sensor parameterisation with ShinyFlourMCMC
+![example work page](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/exampleworkpage.png)
+
+## Bayesian Inference for genetic gate parameterisation (sensor example)
 -   Gate model $$\mu_i = k*(\alpha + \frac{{I}^{n_\text{1}}}{{K}^{n_\text{1}} + {I_i}^{n_1}})$$
 -   Model output variation $$Y_i \sim N(\mu_i,\sigma) , \sigma = \frac{1}{\sqrt \tau} $$
 -   Parameter priors  
