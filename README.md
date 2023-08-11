@@ -1,7 +1,11 @@
 # ShinyFlourMCMC
 
-## Example Work page for sensor parameterisation with ShinyFlourMCMC
+## Example Work page: sensor parameterisation with ShinyFlourMCMC
 ![example work page](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/exampleworkpage.png)
+
+## Example Work page: comparing metrics of genetic elements
+![Compare radar](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/radar_compare.png)
+
 
 ## Bayesian Inference for genetic gate parameterisation (sensor example)
 -   Gate model $$\mu_i = k*(\alpha + \frac{{I}^{n_\text{1}}}{{K}^{n_\text{1}} + {I_i}^{n_1}})$$
@@ -19,5 +23,3 @@
 ## Hints for flourescent file uploading
 ![File input](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/fileinput.png)
 
-## Comparing metrics of genetic elements
-![Compare radar](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/radar_compare.png)
