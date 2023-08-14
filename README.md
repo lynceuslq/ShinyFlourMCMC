@@ -1,4 +1,5 @@
 # ShinyFlourMCMC
+ShinyFlourMCMC is a Shiny App developed to paramterise the metrics of genetic gates and sensors with inflourescence datasets. ShinyFlourMCMC is a updated version of ShinyFlour and can use Bayesian inference and Markov Chain Monte Carlo algorithms (more precisely, Hamilton Monte Carlo) to assess the performance of genetic elements, which is proved to be a more statistically robust method here. Here is also an online version of ShinyFlourMCMC you can use, yet using Bayesian inference may cause timeout in connection, it is recommended to build the App on your server with source codes if you want to use Bayesian and MCMC methods.
 
 ## Example Work page: sensor parameterisation with ShinyFlourMCMC
 ![example work page](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/exampleworkpage.png)
@@ -8,7 +9,7 @@
 
 ****
 
-## Implemented models for genetic gate parameterisation
+## Implemented steady-state models for genetic gate parameterisation
 
 -   Sensor
     $$f(I) \sim k*(\alpha + \frac{{I}^{n_\text{1}}}{{K}^{n_\text{1}} + {I}^{n_\text{1}}})$$
@@ -32,7 +33,7 @@
 ### Single-input gate modeling workflow
 ![Workflow for sensor parameterisation](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/MCMC_workflow_single%20input.png)
 
-### 2-input gate (AND gate) workfloe
+### 2-input gate (AND gate) workflow
 ![2-input](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/2inputworkflow.png)
 
 ****
