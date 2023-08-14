@@ -3,7 +3,7 @@
 ## Example Work page: sensor parameterisation with ShinyFlourMCMC
 ![example work page](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/exampleworkpage.png)
 
-## Example Work page: comparing metrics of genetic elements
+## Example Work page: comparing performance metrics of genetic elements
 ![Compare radar](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/radar_compare.png)
 
 ****
@@ -28,7 +28,12 @@
     $$\tau \sim \mathit{\Gamma (0.1,0.1)}$$
 
 ## Workflow
+
+### Single-input gate modeling workflow
 ![Workflow for sensor parameterisation](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/MCMC_workflow_single%20input.png)
+
+### 2-input gate (AND gate) workfloe
+![2-input](https://github.com/lynceuslq/ShinyFlourMCMC/blob/main/www/2inputworkflow.png)
 
 ****
 ## Hints for flourescent file uploading
